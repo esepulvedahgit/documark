@@ -1,10 +1,10 @@
 """
 Django settings for the documark project.
 
-No database is used yet: business data (users, conversion history) is
-persisted as Fernet-encrypted files under storage/secure/. See
-apps/core/crypto.py and apps/*/repositories/ for the storage layer, and the
-README "Migrando a PostgreSQL" section for how this is designed to evolve.
+Business data (users, conversion history) is persisted in PostgreSQL via
+apps/*/models.py and the Django*Repository implementations in
+apps/*/repositories/. Document content (converted .md output) stays as
+Fernet-encrypted files under storage/ — see apps/core/crypto.py.
 """
 
 import os
@@ -95,12 +95,18 @@ WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
 # ---------------------------------------------------------------------------
-# "Database" — intentionally none. See README for the future PostgreSQL path.
+# Database — PostgreSQL. Only User/HistoryEntry metadata lives here; document
+# content stays as encrypted files under STORAGE_ROOT (see apps/core/crypto.py).
 # ---------------------------------------------------------------------------
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.dummy",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("POSTGRES_DB", "documark"),
+        "USER": os.environ.get("POSTGRES_USER", "documark"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "documark"),
+        "HOST": os.environ.get("POSTGRES_HOST", "postgres"),
+        "PORT": os.environ.get("POSTGRES_PORT", "5432"),
     }
 }
 

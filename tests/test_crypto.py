@@ -8,13 +8,6 @@ def test_encrypt_decrypt_bytes_roundtrip():
     assert crypto.decrypt_bytes(token) == data
 
 
-def test_encrypt_decrypt_json_roundtrip():
-    payload = {"id": "abc-123", "role": "admin", "n": 42, "nested": {"a": [1, 2, 3]}}
-    token = crypto.encrypt_json(payload)
-    assert isinstance(token, bytes)
-    assert crypto.decrypt_json(token) == payload
-
-
 def test_encrypt_decrypt_file_roundtrip(tmp_path):
     original = tmp_path / "plain.md"
     original.write_text("# Título\n\ncontenido", encoding="utf-8")

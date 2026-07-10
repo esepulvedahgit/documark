@@ -12,6 +12,8 @@ from apps.core import crypto, storage
 from apps.core.security import UploadValidationError, validate_upload
 from apps.core.utils import is_safe_path, parse_iso, utcnow
 
+pytestmark = pytest.mark.django_db
+
 
 def _fake_user(user_id="u-1", username="alice"):
     return SimpleNamespace(id=user_id, username=username, role="user")

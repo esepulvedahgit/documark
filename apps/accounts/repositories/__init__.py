@@ -1,14 +1,17 @@
 """Repository factory — the one place that decides which concrete
 BaseUserRepository implementation is in use.
 
-Today it always returns FileUserRepository. Migrating to PostgreSQL later
-means adding a DjangoUserRepository and switching the return value here;
-apps/accounts/services/* never import a concrete repository directly.
+apps/accounts/services/* never import a concrete repository directly, so
+this is the only place a future storage backend change would touch.
 """
 
 from apps.accounts.repositories.base import BaseUserRepository
-from apps.accounts.repositories.file_user_repository import FileUserRepository
 
 
 def get_user_repository() -> BaseUserRepository:
-    return FileUserRepository()
+    # Imported lazily: apps.accounts.models imports apps.accounts.repositories.base,
+    # which would otherwise trigger this package's __init__ importing models.py
+    # back before it finishes defining UserProfile (circular import).
+    from apps.accounts.repositories.django_user_repository import DjangoUserRepository
+
+    return DjangoUserRepository()

@@ -5,7 +5,22 @@ services:
     # No volume: Redis here is purely a Celery broker + rate-limit cache,
     # not business data. Losing it on restart drops in-flight/queued
     # conversions and rate-limit counters, both self-healing — see README
-    # "Limitaciones". Users/history stay in storage/secure, unaffected.
+    # "Limitaciones".
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-documark}
+      POSTGRES_USER: ${POSTGRES_USER:-documark}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-documark}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-documark} -d ${POSTGRES_DB:-documark}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   documark:
     build: .
@@ -17,7 +32,10 @@ services:
     volumes:
       - ./storage:/app/storage
     depends_on:
-      - redis
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   celery_worker:
@@ -29,7 +47,10 @@ services:
     volumes:
       - ./storage:/app/storage
     depends_on:
-      - redis
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   celery_beat:
@@ -41,5 +62,11 @@ services:
     volumes:
       - ./storage:/app/storage
     depends_on:
-      - redis
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
+
+volumes:
+  postgres_data:

@@ -1,15 +1,14 @@
 """Encryption-at-rest utilities built on cryptography.Fernet.
 
-Every piece of persistent metadata (users, conversion history) and every
-converted output kept on disk while awaiting download is encrypted with a
-single Fernet key coming from the ``DOCUMARK_FERNET_KEY`` environment
-variable.
+Every converted output kept on disk while awaiting download
+(storage/outputs/*.md.enc) is encrypted with a single Fernet key coming
+from the ``DOCUMARK_FERNET_KEY`` environment variable. User/history
+metadata lives in PostgreSQL instead — see apps/*/models.py.
 
 Never log the key, plaintext passwords, or document contents from this
 module.
 """
 
-import json
 import logging
 import os
 from functools import lru_cache
@@ -64,16 +63,6 @@ def decrypt_bytes(token: bytes) -> bytes:
         return _get_fernet().decrypt(token)
     except InvalidToken as exc:
         raise CryptoError("Unable to decrypt data: invalid token or wrong key") from exc
-
-
-def encrypt_json(obj) -> bytes:
-    payload = json.dumps(obj, ensure_ascii=False, default=str).encode("utf-8")
-    return encrypt_bytes(payload)
-
-
-def decrypt_json(token: bytes):
-    payload = decrypt_bytes(token)
-    return json.loads(payload.decode("utf-8"))
 
 
 def encrypt_file(input_path: Path, output_path: Path) -> None:

@@ -6,6 +6,7 @@ set -e
 # image/entrypoint but would otherwise redundantly race each other (and the
 # web service) to do the same thing on every startup.
 if [ "$1" = "gunicorn" ]; then
+    python manage.py migrate --noinput
     python manage.py create_initial_admin
     python manage.py cleanup_expired
 fi

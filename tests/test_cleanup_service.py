@@ -1,10 +1,14 @@
 from datetime import timedelta
 
+import pytest
+
 from apps.converter.repositories import get_history_repository
 from apps.converter.repositories.base import HistoryEntry, STATUS_EXPIRED, STATUS_FAILED, STATUS_PROCESSING, STATUS_SUCCESS
 from apps.converter.services import cleanup_service
 from apps.core import crypto, storage
 from apps.core.utils import new_uuid, utcnow
+
+pytestmark = pytest.mark.django_db
 
 
 def _make_entry(status, created_at, expires_at=None, output_filename=None):

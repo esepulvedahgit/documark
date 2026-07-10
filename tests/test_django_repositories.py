@@ -1,10 +1,12 @@
 import pytest
 
 from apps.accounts.repositories.base import ROLE_ADMIN, ROLE_USER, User
-from apps.accounts.repositories.file_user_repository import FileUserRepository
+from apps.accounts.repositories.django_user_repository import DjangoUserRepository
 from apps.converter.repositories.base import HistoryEntry, STATUS_EXPIRED, STATUS_SUCCESS
-from apps.converter.repositories.file_history_repository import FileHistoryRepository
+from apps.converter.repositories.django_history_repository import DjangoHistoryRepository
 from apps.core.utils import new_uuid, utcnow_iso
+
+pytestmark = pytest.mark.django_db
 
 
 def _make_user(username="alice", role=ROLE_USER):
@@ -39,8 +41,8 @@ def _make_history_entry(user, status=STATUS_SUCCESS, expires_at=None):
     )
 
 
-def test_create_and_get_user(isolated_storage):
-    repo = FileUserRepository()
+def test_create_and_get_user():
+    repo = DjangoUserRepository()
     user = _make_user()
     repo.create(user)
 
@@ -50,15 +52,15 @@ def test_create_and_get_user(isolated_storage):
     assert repo.get_by_username("ALICE") is not None  # case-insensitive lookup
 
 
-def test_duplicate_username_raises(isolated_storage):
-    repo = FileUserRepository()
+def test_duplicate_username_raises():
+    repo = DjangoUserRepository()
     repo.create(_make_user("bob"))
     with pytest.raises(ValueError):
         repo.create(_make_user("bob"))
 
 
-def test_update_user_role_and_active(isolated_storage):
-    repo = FileUserRepository()
+def test_update_user_role_and_active():
+    repo = DjangoUserRepository()
     user = _make_user("carol", role=ROLE_USER)
     repo.create(user)
 
@@ -71,8 +73,14 @@ def test_update_user_role_and_active(isolated_storage):
     assert fetched.is_active is False
 
 
-def test_history_add_and_list_for_user(isolated_storage):
-    repo = FileHistoryRepository()
+def test_update_missing_user_raises():
+    repo = DjangoUserRepository()
+    with pytest.raises(KeyError):
+        repo.update(_make_user("ghost"))
+
+
+def test_history_add_and_list_for_user():
+    repo = DjangoHistoryRepository()
     user = _make_user("dave")
     entry_a = _make_history_entry(user)
     entry_b = _make_history_entry(user)
@@ -87,8 +95,8 @@ def test_history_add_and_list_for_user(isolated_storage):
     assert len(repo.list_all()) == 3
 
 
-def test_history_entry_can_be_marked_expired(isolated_storage):
-    repo = FileHistoryRepository()
+def test_history_entry_can_be_marked_expired():
+    repo = DjangoHistoryRepository()
     user = _make_user("frank")
     entry = _make_history_entry(user, status=STATUS_SUCCESS, expires_at=utcnow_iso())
     repo.add(entry)
@@ -102,8 +110,8 @@ def test_history_entry_can_be_marked_expired(isolated_storage):
     assert fetched.output_filename is None
 
 
-def test_history_entry_delete_removes_record(isolated_storage):
-    repo = FileHistoryRepository()
+def test_history_entry_delete_removes_record():
+    repo = DjangoHistoryRepository()
     user = _make_user("grace")
     entry = _make_history_entry(user)
     repo.add(entry)
@@ -115,6 +123,13 @@ def test_history_entry_delete_removes_record(isolated_storage):
     assert entry.id not in {e.id for e in repo.list_all()}
 
 
-def test_history_entry_delete_is_idempotent(isolated_storage):
-    repo = FileHistoryRepository()
+def test_history_entry_delete_is_idempotent():
+    repo = DjangoHistoryRepository()
     repo.delete("does-not-exist")  # must not raise
+
+
+def test_history_update_missing_entry_raises():
+    repo = DjangoHistoryRepository()
+    user = _make_user("henry")
+    with pytest.raises(KeyError):
+        repo.update(_make_history_entry(user))

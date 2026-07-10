@@ -15,8 +15,9 @@ usuarios, roles, historial de conversiones y una UI moderna (Tailwind + HTMX).
 - Vista previa del Markdown y descarga del `.md`.
 - Historial de conversiones (metadatos únicamente, nunca el contenido del documento),
   temporal: cada registro se borra por completo a las 24h.
-- **Sin base de datos SQL**: metadatos e historial persisten como archivos cifrados con
-  Fernet (Redis solo se usa como cola de tareas / cache de rate-limit, nunca datos de negocio).
+- **PostgreSQL** para metadatos de usuarios e historial (Redis solo se usa como cola de
+  tareas / cache de rate-limit, nunca datos de negocio). El contenido de los documentos
+  convertidos nunca toca la base de datos: sigue viviendo como archivo cifrado con Fernet.
 - Expiración automática de resultados y limpieza de archivos temporales.
 - Rate limiting en login, conversión y descarga.
 - Expiración de sesión por inactividad.
@@ -54,7 +55,7 @@ La app queda disponible en:
 http://localhost:8000
 ```
 
-Esto levanta **4 servicios**:
+Esto levanta **5 servicios**:
 
 | Servicio | Rol |
 |---|---|
@@ -62,11 +63,13 @@ Esto levanta **4 servicios**:
 | `celery_worker` | Ejecuta las conversiones en background |
 | `celery_beat` | Dispara `cleanup_expired` periódicamente (cada `DOCUMARK_CLEANUP_INTERVAL_SECONDS`) |
 | `redis` | Broker de Celery + cache de rate-limiting (sin datos de negocio) |
+| `postgres` | Base de datos — usuarios e historial de conversiones |
 
 Al iniciar el servicio `documark` se ejecutan automáticamente (`scripts/entrypoint.sh`,
 solo para ese servicio):
-1. `create_initial_admin` — crea el admin inicial desde el `.env` si no existe.
-2. `cleanup_expired` — limpia archivos temporales/expirados de una sesión anterior.
+1. `migrate` — aplica las migraciones pendientes contra PostgreSQL.
+2. `create_initial_admin` — crea el admin inicial desde el `.env` si no existe.
+3. `cleanup_expired` — limpia archivos temporales/expirados de una sesión anterior.
 
 ## Usuario admin inicial
 
@@ -83,6 +86,8 @@ vez; si ya existe un usuario con ese nombre, no se toca.
 | `DJANGO_ALLOWED_HOSTS` | Hosts permitidos, separados por coma | `localhost,127.0.0.1` |
 | `DOCUMARK_ENV` | `development` o `production` | `development` |
 | `DOCUMARK_FERNET_KEY` | Clave Fernet para cifrado en reposo | *(vacío en dev, obligatoria en prod)* |
+| `POSTGRES_DB/USER/PASSWORD` | Base de datos PostgreSQL | `documark` / `documark` / `documark` |
+| `POSTGRES_HOST/PORT` | Host y puerto de PostgreSQL | `postgres` / `5432` |
 | `DOCUMARK_MAX_UPLOAD_MB` | Tamaño máximo de archivo subido | `50` |
 | `DOCUMARK_OUTPUT_TTL_SECONDS` | Cuánto queda descargable el `.md` (luego se borra el archivo, la entrada queda "expirada") | `7200` (2h) |
 | `DOCUMARK_HISTORY_RETENTION_SECONDS` | Cuánto se conserva el *registro* del historial antes de borrarse por completo | `86400` (24h) |
@@ -143,20 +148,27 @@ una vez la app esté detrás de TLS.
 
 ## Cifrado en reposo
 
-Todos los metadatos persistentes (`storage/secure/users.enc`,
-`storage/secure/history.enc`) y los resultados `.md` mientras esperan
-descarga (`storage/outputs/*.md.enc`) se cifran con `cryptography.Fernet`
-(`apps/core/crypto.py`). El documento original solo existe en texto claro
-durante el proceso de conversión y se borra inmediatamente después.
+Los resultados `.md` mientras esperan descarga (`storage/outputs/*.md.enc`)
+se cifran con `cryptography.Fernet` (`apps/core/crypto.py`). El documento
+original solo existe en texto claro durante el proceso de conversión y se
+borra inmediatamente después. Los metadatos de usuarios e historial viven en
+PostgreSQL (ver "Almacenamiento"), no como archivos cifrados.
 
-## Almacenamiento sin base de datos
+## Almacenamiento
 
-No se usa PostgreSQL, SQLite ni el ORM de Django para datos de negocio.
-Usuarios e historial se guardan como JSON cifrado en archivos, con bloqueo de
-archivo (`fcntl`) para que varios workers de Gunicorn puedan escribir sin
-corromperse. Los servicios (`apps/*/services/`) solo dependen de una interfaz
-de repositorio abstracta (`BaseUserRepository`, `BaseHistoryRepository`), no
-del almacenamiento concreto.
+Usuarios e historial de conversiones viven en PostgreSQL, vía el ORM de
+Django (`apps/accounts/models.py`, `apps/converter/models.py`). Los
+servicios (`apps/*/services/`) solo dependen de una interfaz de repositorio
+abstracta (`BaseUserRepository`, `BaseHistoryRepository`), implementada hoy
+por `DjangoUserRepository`/`DjangoHistoryRepository`
+(`apps/accounts/repositories/django_user_repository.py`,
+`apps/converter/repositories/django_history_repository.py`) — cambiar de
+backend de nuevo solo requeriría tocar las factorías en
+`apps/*/repositories/__init__.py`.
+
+El contenido de los documentos convertidos nunca pasa por la base de datos:
+sigue viviendo como archivo cifrado con Fernet bajo `storage/outputs/` (ver
+"Cifrado en reposo").
 
 ## Actualizando MarkItDown
 
@@ -175,10 +187,6 @@ su API, solo ese archivo necesita ajustarse.
 
 ## Limitaciones
 
-- El almacenamiento por archivos cifrados es apto para pocos usuarios.
-- No es ideal para concurrencia alta (el bloqueo de archivo serializa las
-  escrituras a cada archivo `.enc`).
-- Para producción multiusuario real se recomienda migrar a PostgreSQL (ver abajo).
 - Los documentos convertidos expiran (`DOCUMARK_OUTPUT_TTL_SECONDS`, 2h por
   defecto) y dejan de poder descargarse; el *registro* del historial (nombre,
   fecha, estado) se conserva un poco más, hasta `DOCUMARK_HISTORY_RETENTION_SECONDS`
@@ -195,29 +203,9 @@ su API, solo ese archivo necesita ajustarse.
 
 ## Roadmap
 
-- PostgreSQL como backend de repositorios.
 - `django.contrib.auth` / Django Admin (opcional, si se justifica).
 - OCR de imágenes/escaneos.
 - Integración IA/RAG sobre el historial convertido.
-
-## Migrando a PostgreSQL (segunda etapa)
-
-La arquitectura ya está preparada para esto sin tocar vistas ni servicios:
-
-1. Definir modelos Django: `UserProfile` (o adoptar `django.contrib.auth.User`)
-   y `ConversionHistory`, con los mismos campos que los dataclasses actuales
-   (`apps/accounts/repositories/base.py:User`,
-   `apps/converter/repositories/base.py:HistoryEntry`).
-2. Implementar `DjangoUserRepository(BaseUserRepository)` y
-   `DjangoHistoryRepository(BaseHistoryRepository)` sobre el ORM.
-3. Cambiar `settings.DATABASES` a PostgreSQL y añadir `psycopg` a requirements.txt.
-4. Generar y aplicar migraciones (`makemigrations` / `migrate`).
-5. Cambiar las factorías `get_user_repository()` / `get_history_repository()`
-   (en `apps/accounts/repositories/__init__.py` y
-   `apps/converter/repositories/__init__.py`) para devolver las nuevas
-   implementaciones.
-6. Los servicios (`auth_service`, `conversion_service`, etc.) y las vistas no
-   cambian: solo conocen la interfaz abstracta.
 
 ## Tests
 
@@ -225,19 +213,23 @@ La arquitectura ya está preparada para esto sin tocar vistas ni servicios:
 pytest
 ```
 
-Cubre cifrado/descifrado, hashing y fuerza de contraseñas, repositorios de
-archivo (usuarios e historial), aislamiento/timeout del subproceso de
-MarkItDown (con la librería real, no mockeada), y el flujo de conversión en
-background (validación, transición de estados, idempotencia ante una
-redelivery de Celery). Los tests corren con `CELERY_TASK_ALWAYS_EAGER=True`
-(fixture `autouse` en `conftest.py`) — no necesitan un Redis real.
+Cubre cifrado/descifrado, hashing y fuerza de contraseñas, repositorios
+Django (usuarios e historial, contra PostgreSQL vía `pytest-django`),
+aislamiento/timeout del subproceso de MarkItDown (con la librería real, no
+mockeada), y el flujo de conversión en background (validación, transición de
+estados, idempotencia ante una redelivery de Celery). Los tests corren con
+`CELERY_TASK_ALWAYS_EAGER=True` (fixture `autouse` en `conftest.py`) — no
+necesitan un Redis real. Sí necesitan una conexión a PostgreSQL alcanzable
+(mismas variables `POSTGRES_*` que la app) para que `pytest-django` pueda
+crear la base de datos de test.
 
 ## Flujo de autenticación
 
 `GET /login/` muestra el formulario → `POST /login/` (rate-limited 5/min por
-IP+usuario) autentica contra `FileUserRepository` → la sesión guarda
-`{user_id, username, role}` → cada request revalida que el usuario siga activo
-y refresca la ventana de inactividad → `POST /logout/` limpia la sesión.
+IP+usuario) autentica contra `DjangoUserRepository` (PostgreSQL) → la sesión
+guarda `{user_id, username, role}` → cada request revalida que el usuario
+siga activo y refresca la ventana de inactividad → `POST /logout/` limpia la
+sesión.
 
 ## Flujo de conversión
 
