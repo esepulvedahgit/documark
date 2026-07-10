@@ -1,34 +1,179 @@
 {% extends "base.html" %}
 {% block title %}Dashboard — documark{% endblock %}
 {% block content %}
-<h1 class="text-lg font-semibold mb-4">
-  {% if is_admin %}Dashboard (global){% else %}Dashboard{% endif %}
-</h1>
 
-<div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-  <div class="bg-white border border-gray-200 rounded-lg p-4">
-    <p class="text-xs text-gray-500">Conversiones realizadas</p>
-    <p class="text-2xl font-semibold">{{ stats.total }}</p>
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 pb-6 border-b border-gray-200">
+  <div>
+    <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
+      {% if is_admin %}Dashboard global{% else %}Dashboard{% endif %}
+    </h1>
+    <p class="mt-1 text-sm text-gray-500">
+      {% if is_admin %}
+        Resumen de todas las conversiones realizadas por los usuarios de documark.
+      {% else %}
+        Resumen de tus conversiones de documentos a Markdown.
+      {% endif %}
+    </p>
   </div>
-  <div class="bg-white border border-gray-200 rounded-lg p-4">
-    <p class="text-xs text-gray-500">En proceso</p>
+  <a href="{% url 'converter:convert' %}"
+     class="inline-flex items-center justify-center bg-indigo-600 text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-indigo-700 shrink-0">
+    Convertir un documento
+  </a>
+</div>
+
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-12">
+
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow p-4">
+    <span class="inline-flex items-center justify-center h-8 w-8 rounded-md bg-gray-100 text-gray-500 mb-3">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M7 3h7l4 4v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+        <path d="M14 3v4h4" />
+        <path d="M9.5 12h5M9.5 15.5h5" />
+      </svg>
+    </span>
+    <p class="text-xs text-gray-500 mb-1">Conversiones realizadas</p>
+    <p class="text-2xl font-semibold text-gray-900">{{ stats.total }}</p>
+  </div>
+
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow p-4">
+    <span class="inline-flex items-center justify-center h-8 w-8 rounded-md bg-amber-50 text-amber-600 mb-3">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M12 7.5V12l3 2" />
+      </svg>
+    </span>
+    <p class="text-xs text-gray-500 mb-1">En proceso</p>
     <p class="text-2xl font-semibold text-amber-600">{{ stats.processing }}</p>
   </div>
-  <div class="bg-white border border-gray-200 rounded-lg p-4">
-    <p class="text-xs text-gray-500">Exitosas</p>
+
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow p-4">
+    <span class="inline-flex items-center justify-center h-8 w-8 rounded-md bg-green-50 text-green-600 mb-3">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M8.5 12.5l2.5 2.5 4.5-5" />
+      </svg>
+    </span>
+    <p class="text-xs text-gray-500 mb-1">Exitosas</p>
     <p class="text-2xl font-semibold text-green-600">{{ stats.success }}</p>
   </div>
-  <div class="bg-white border border-gray-200 rounded-lg p-4">
-    <p class="text-xs text-gray-500">Fallidas</p>
+
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow p-4">
+    <span class="inline-flex items-center justify-center h-8 w-8 rounded-md bg-red-50 text-red-600 mb-3">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M9.5 9.5l5 5M14.5 9.5l-5 5" />
+      </svg>
+    </span>
+    <p class="text-xs text-gray-500 mb-1">Fallidas</p>
     <p class="text-2xl font-semibold text-red-600">{{ stats.failed }}</p>
   </div>
-  <div class="bg-white border border-gray-200 rounded-lg p-4">
-    <p class="text-xs text-gray-500">Archivos temporales activos</p>
+
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow p-4">
+    <span class="inline-flex items-center justify-center h-8 w-8 rounded-md bg-indigo-50 text-indigo-600 mb-3">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 6.5a1 1 0 0 1 1-1h4l2 2h8a1 1 0 0 1 1 1V17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6.5Z" />
+      </svg>
+    </span>
+    <p class="text-xs text-gray-500 mb-1">Archivos temporales activos</p>
     <p class="text-2xl font-semibold text-indigo-600">{{ stats.active_temp_files }}</p>
   </div>
 </div>
 
-<a href="{% url 'converter:convert' %}" class="inline-block bg-indigo-600 text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-indigo-700">
-  Convertir un documento
-</a>
+<section class="mt-4 pt-8 border-t border-gray-200">
+  <h2 class="text-base font-semibold text-gray-900 mb-2">Cómo funciona documark</h2>
+  <p class="text-sm text-gray-500 max-w-2xl mb-6">
+    documark convierte tus documentos a Markdown limpio usando MarkItDown. Cada conversión se
+    procesa en segundo plano, se registra en tu historial y, una vez lista, queda disponible para
+    descargar durante un tiempo limitado antes de eliminarse automáticamente. Toda la información
+    se guarda cifrada en el servidor.
+  </p>
+
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+    <p class="text-xs font-medium text-gray-500 mb-4">Formatos soportados</p>
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
+
+      <div class="flex flex-col items-center gap-2 text-center">
+        <span class="inline-flex items-center justify-center h-10 w-10 rounded-md bg-rose-50 text-rose-600">
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 3.5h8l4 4V19a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" />
+            <path d="M14 3.5V8h4" />
+          </svg>
+        </span>
+        <span class="text-xs font-medium text-gray-600">PDF</span>
+      </div>
+
+      <div class="flex flex-col items-center gap-2 text-center">
+        <span class="inline-flex items-center justify-center h-10 w-10 rounded-md bg-blue-50 text-blue-600">
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 3.5h8l4 4V19a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" />
+            <path d="M14 3.5V8h4" />
+          </svg>
+        </span>
+        <span class="text-xs font-medium text-gray-600">Word</span>
+      </div>
+
+      <div class="flex flex-col items-center gap-2 text-center">
+        <span class="inline-flex items-center justify-center h-10 w-10 rounded-md bg-orange-50 text-orange-600">
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 3.5h8l4 4V19a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" />
+            <path d="M14 3.5V8h4" />
+          </svg>
+        </span>
+        <span class="text-xs font-medium text-gray-600">PowerPoint</span>
+      </div>
+
+      <div class="flex flex-col items-center gap-2 text-center">
+        <span class="inline-flex items-center justify-center h-10 w-10 rounded-md bg-emerald-50 text-emerald-600">
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 3.5h8l4 4V19a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" />
+            <path d="M14 3.5V8h4" />
+          </svg>
+        </span>
+        <span class="text-xs font-medium text-gray-600">Excel · CSV</span>
+      </div>
+
+      <div class="flex flex-col items-center gap-2 text-center">
+        <span class="inline-flex items-center justify-center h-10 w-10 rounded-md bg-violet-50 text-violet-600">
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 8 5 12l4 4" />
+            <path d="M15 8l4 4-4 4" />
+          </svg>
+        </span>
+        <span class="text-xs font-medium text-gray-600">JSON · XML · HTML</span>
+      </div>
+
+      <div class="flex flex-col items-center gap-2 text-center">
+        <span class="inline-flex items-center justify-center h-10 w-10 rounded-md bg-slate-50 text-slate-600">
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 3.5h8l4 4V19a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" />
+            <path d="M14 3.5V8h4" />
+          </svg>
+        </span>
+        <span class="text-xs font-medium text-gray-600">TXT</span>
+      </div>
+
+      <div class="flex flex-col items-center gap-2 text-center">
+        <span class="inline-flex items-center justify-center h-10 w-10 rounded-md bg-teal-50 text-teal-600">
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 5.5c1.8-1 4-1 6 0v13c-2-1-4.2-1-6 0v-13Z" />
+            <path d="M20 5.5c-1.8-1-4-1-6 0v13c2-1 4.2-1 6 0v-13Z" />
+          </svg>
+        </span>
+        <span class="text-xs font-medium text-gray-600">EPUB</span>
+      </div>
+
+      <div class="flex flex-col items-center gap-2 text-center">
+        <span class="inline-flex items-center justify-center h-10 w-10 rounded-md bg-stone-50 text-stone-600">
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 3.5h8l4 4V19a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" />
+            <path d="M14 3.5V8h4" />
+            <path d="M11 6v2M11 10v2M11 14v2" />
+          </svg>
+        </span>
+        <span class="text-xs font-medium text-gray-600">ZIP</span>
+      </div>
+
+    </div>
+  </div>
+</section>
 {% endblock %}
