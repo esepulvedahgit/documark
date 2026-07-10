@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Convertir documento — documark{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+    <h1 class="text-lg font-semibold mb-1">Convertir a Markdown</h1>
+    <p class="text-sm text-gray-500 mb-4">
+      Formatos soportados: pdf, docx, pptx, xlsx, csv, json, xml, html, txt, epub, zip.
+    </p>
+
+    <form
+      hx-post="{% url 'converter:convert' %}"
+      hx-target="#result"
+      hx-swap="innerHTML"
+      hx-encoding="multipart/form-data"
+      hx-indicator="#convert-loader"
+      class="space-y-4"
+    >
+      {% csrf_token %}
+      {{ form.document }}
+      {% for error in form.document.errors %}
+        <p class="text-xs text-red-600">{{ error }}</p>
+      {% endfor %}
+      <button type="submit" class="bg-indigo-600 text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-indigo-700">
+        Convertir
+      </button>
+    </form>
+
+    {% include "partials/loader.html" %}
+  </div>
+
+  <div id="result" class="mt-6">
+    {% if entry %}
+      {% include "converter/partials/result.html" %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

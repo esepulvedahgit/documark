@@ -1,0 +1,42 @@
+{% load converter_extras %}
+{% if entry %}
+  {% if entry.status == "processing" %}
+    <div hx-get="{% url 'converter:convert_status' entry.id %}"
+         hx-trigger="load delay:2s"
+         hx-target="#result"
+         hx-swap="innerHTML">
+      <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6 flex items-center gap-3">
+        <svg class="animate-spin h-5 w-5 text-indigo-600 shrink-0" viewBox="0 0 24 24" fill="none">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+        <div class="text-sm text-gray-600">
+          <p class="font-medium text-gray-800">Procesando "{{ entry.original_filename }}"...</p>
+          <p class="text-xs text-gray-400">Los documentos grandes pueden tardar varios minutos. Esta página se actualiza sola.</p>
+        </div>
+      </div>
+    </div>
+  {% elif entry.status == "success" %}
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h2 class="text-sm font-semibold text-green-700">Conversión exitosa</h2>
+          {% if entry.expires_at %}
+            <p class="text-xs text-gray-400">Disponible para descargar hasta el {{ entry.expires_at|format_datetime }}</p>
+          {% endif %}
+        </div>
+        <a href="{% url 'converter:download' entry.id %}"
+           class="bg-green-600 text-white text-sm rounded-md px-4 py-2 hover:bg-green-700">
+          Descargar .md
+        </a>
+      </div>
+      <div class="markdown-preview">
+        {% for line in preview_text.splitlines %}
+          <div class="code-line"><span class="line-no">{{ forloop.counter }}</span><span class="line-text">{{ line }}</span></div>
+        {% endfor %}
+      </div>
+    </div>
+  {% else %}
+    {% include "converter/partials/error.html" %}
+  {% endif %}
+{% endif %}

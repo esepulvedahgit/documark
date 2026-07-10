@@ -1,0 +1,15 @@
+# MarkItDown is pinned and isolated in its own requirements file on purpose:
+# it releases very often, and this is the ONLY line that needs to change to
+# pick up a new version. All library usage is confined to
+# apps/converter/services/markitdown_service.py.
+#
+# Extras are "targeted": only the formats documark actually accepts
+# (see settings.DOCUMARK_ALLOWED_EXTENSIONS) get their extra installed,
+# instead of the much heavier markitdown[all] (which pulls in onnxruntime,
+# audio/OCR/Azure dependencies and system tools like ffmpeg/exiftool that
+# this app doesn't use). csv/json/xml/html/txt/epub/zip are handled by
+# MarkItDown's core converters with no extra required.
+#
+# To update: run scripts/update_markitdown.sh (or edit the pin by hand),
+# then `docker compose up --build`.
+markitdown[pdf,docx,pptx,xlsx]==0.1.6

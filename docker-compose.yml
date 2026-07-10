@@ -1,0 +1,45 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # No volume: Redis here is purely a Celery broker + rate-limit cache,
+    # not business data. Losing it on restart drops in-flight/queued
+    # conversions and rate-limit counters, both self-healing — see README
+    # "Limitaciones". Users/history stay in storage/secure, unaffected.
+
+  documark:
+    build: .
+    image: documark:latest
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./storage:/app/storage
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  celery_worker:
+    build: .
+    image: documark:latest
+    command: celery -A config worker --loglevel=info --concurrency=${CELERY_WORKER_CONCURRENCY:-2}
+    env_file:
+      - .env
+    volumes:
+      - ./storage:/app/storage
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  celery_beat:
+    build: .
+    image: documark:latest
+    command: celery -A config beat --loglevel=info
+    env_file:
+      - .env
+    volumes:
+      - ./storage:/app/storage
+    depends_on:
+      - redis
+    restart: unless-stopped

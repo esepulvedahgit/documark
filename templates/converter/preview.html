@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load converter_extras %}
+{% block title %}Vista previa — documark{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h1 class="text-lg font-semibold">{{ entry.original_filename }}</h1>
+      <p class="text-xs text-gray-500">
+        Convertido el {{ entry.created_at|format_datetime }}
+        {% if entry.expires_at %} &middot; expira {{ entry.expires_at|format_datetime }}{% endif %}
+      </p>
+    </div>
+    <a href="{% url 'converter:download' entry.id %}" class="bg-green-600 text-white text-sm rounded-md px-4 py-2 hover:bg-green-700">
+      Descargar .md
+    </a>
+  </div>
+
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+    <div class="markdown-preview">
+      {% for line in preview_text.splitlines %}
+        <div class="code-line"><span class="line-no">{{ forloop.counter }}</span><span class="line-text">{{ line }}</span></div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

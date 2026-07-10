@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load converter_extras %}
+{% block title %}Historial — documark{% endblock %}
+{% block content %}
+<h1 class="text-lg font-semibold mb-4">
+  {% if is_admin_view %}Historial global{% else %}Mi historial{% endif %}
+</h1>
+
+<div class="bg-white border border-gray-200 rounded-lg overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-50 text-gray-500 text-left">
+      <tr>
+        {% if is_admin_view %}<th class="px-4 py-2">Usuario</th>{% endif %}
+        <th class="px-4 py-2">Archivo</th>
+        <th class="px-4 py-2">Estado</th>
+        <th class="px-4 py-2">Creación</th>
+        <th class="px-4 py-2">Expiración</th>
+        <th class="px-4 py-2"></th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-100">
+      {% for row in rows %}
+      <tr>
+        {% if is_admin_view %}<td class="px-4 py-2">{{ row.entry.username }}</td>{% endif %}
+        <td class="px-4 py-2 font-medium">{{ row.entry.original_filename }}</td>
+        <td class="px-4 py-2">
+          {% if row.effective_status == "processing" %}
+            <span class="text-amber-600 text-xs">Procesando...</span>
+          {% elif row.effective_status == "success" %}
+            <span class="text-green-700 text-xs">Exitosa</span>
+          {% elif row.effective_status == "failed" %}
+            <span class="text-red-600 text-xs" title="{{ row.entry.error_message }}">Fallida</span>
+          {% else %}
+            <span class="text-gray-400 text-xs">Expirada</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-2 text-gray-500">
+          {{ row.entry.created_at|format_datetime }}
+        </td>
+        <td class="px-4 py-2 text-gray-500">
+          {% if row.entry.expires_at %}
+            {{ row.entry.expires_at|format_datetime }}
+          {% else %}
+            <span class="text-gray-400 text-xs">No aplica</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-2 text-right">
+          {% if row.downloadable %}
+            <a href="{% url 'converter:download' row.entry.id %}" class="text-indigo-600 hover:underline">Descargar</a>
+          {% elif row.effective_status == "expired" %}
+            <span class="text-gray-400 text-xs">Expirado</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="{% if is_admin_view %}6{% else %}5{% endif %}" class="px-4 py-6 text-center text-gray-400">Sin conversiones todavía.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

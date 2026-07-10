@@ -1,0 +1,40 @@
+/* Line-numbered Markdown preview (ported from the original Flask MVP). */
+.markdown-preview {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  max-height: 28rem;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.markdown-preview .code-line {
+  display: flex;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.markdown-preview .line-no {
+  flex: none;
+  width: 2.5rem;
+  color: #64748b;
+  text-align: right;
+  margin-right: 0.75rem;
+  user-select: none;
+}
+
+.markdown-preview .line-text {
+  flex: 1;
+}
+
+.htmx-indicator {
+  display: none;
+}
+
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+  display: flex;
+}
