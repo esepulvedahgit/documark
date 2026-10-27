@@ -250,3 +250,4 @@ navegador deja de refrescar solo.
 
 `GET /download/<id>/` (rate-limited 60/hora) verifica dueño/admin y que no haya
 expirado, descifra en memoria y sirve el archivo como adjunto.
+# documark
